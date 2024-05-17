@@ -15,9 +15,9 @@ meta:
 
 # Introduction
 
-VEGA's lead API enables clients (institutions), lead vendors, and agencies to create prospective student records in the VEGA database.  Each program has a configurable filter/exclusion ruleset.
+VEGA's lead API enables clients (institutions), lead vendors, and agencies to create and update prospective student records in the VEGA database. Each degree program has a configurable filter/exclusion ruleset.
 
-To make updates to your specific posting requirements or filter rules please login here: <a href="https://app.vegaforeducation.com/" target="_blank">https://app.vegaforeducation.com/</a> and navigate to the management tab.
+To make updates to your specific posting requirements or filter rules please login here: <a href="https://app.vegaforeducation.com/" target="_blank">https://app.vegaforeducation.com/</a> and navigate to the Manage tab.
 
 # Authentication
 
@@ -43,9 +43,9 @@ configured by the client in the Fields second of VEGA.
 
 ```json
 {
-  "id": "a43098ab",
+  "id": "VEGA-a43098ab",
   "external_id": "SALESFORCE_ID_12345",
-  "campaign_id": "d7e9134",
+  "campaign_id": "CAMP-d7e9134",
   "program_code": "PSYCH",
   "status": "interviewed",
   "billable": true,
@@ -87,15 +87,17 @@ Parameter | Type | Description
 `subid` | String | Finer-grained source identifier, e.g. identifying the specific advertising creative that was shown to the lead. The semantics of this field are client-defined.
 `vendor_id` | String | Identifier of the vendor that submitted the lead. This may be an **internal vendor** of the client.
 `cost_in_cents` | Integer | The cost-per-lead, in cents, assigned to the lead. Note that this value is present whether or not the lead is billable, so in order to compute total outlay, sum the `cost_in_cents` over only those leads where `billable` is true.
-`first_name` | String | First name
-`last_name` | String | Last name
-`phone` | String | Phone number (digits only)
-`email` | String | Email address
-`street_address` | String | Street address, possibly normalized with Google Maps API
-`city` | String | City
-`state` | String | State
-`zip_code` | String | ZIP code
+`first_name` \* | String | First name
+`last_name` \* | String | Last name
+`phone` \* | String | Phone number (digits only)
+`email` \* | String | Email address
+`street_address` \* | String | Street address, possibly normalized with Google Maps API
+`city` \* | String | City
+`state` \* | String | State (abbreviation or full name)
+`zip_code` \* | String | ZIP code
 ... | ... | All client-specific custom fields
+
+\* Note that the standard field names marked with an asterisk can be renamed on a per-client basis. For instance, a client may choose to use names like `ContactFirstName`, `ContactLastName`, `ContactPhone`, `LeadEmail`, `Address`, `City`, `State`, and `PostalCode`.
 
 ### Status
 
@@ -119,20 +121,20 @@ Status | Description
 ## Post a new lead
 
 ```shell
-curl -X POST 'https://leads.vegaforeducation.com/partner/leads' \
+curl -X POST 'https://leads.vegaforeducation.com/AwesomeUniversity/leads' \
   -H 'X-API-Key: YOUR_API_KEY' \
   -H 'Content-type: application/json' \
   -d '{
-        "campaign_id": "d7e9134",
+        "campaign_id": "CAMP-d7e9134",
         "program_code": "PSYCH",
         "StreetAddress": "123 Fake St",
         "City": "Oak Lawn",
         "State": "IL",
-        "ZIP_Code": "60453",
-        "FirstName": "Jane",
-        "LastName": "Doe",
-        "Phone": "2125551234",
-        "Email": "jane.doe@example.com",
+        "PostalCode": "60453",
+        "ContactFirstName": "Jane",
+        "ContactLastName": "Doe",
+        "ContactPhone": "2125551234",
+        "LeadEmail": "jane.doe@example.com",
         "GraduationYear": "2018",
         "Military": "1",
         "StartClasses": "within_3_months"
@@ -143,6 +145,7 @@ curl -X POST 'https://leads.vegaforeducation.com/partner/leads' \
 
 ```json
 {
+  "id": "VEGA-a43098ab",
   "status": "new_lead"
 }
 ```
@@ -151,6 +154,7 @@ curl -X POST 'https://leads.vegaforeducation.com/partner/leads' \
 
 ```json
 {
+  "id": "VEGA-a43098ab",
   "status": "rejected",
   "rejection_reason": "Duplicate lead: jane.doe@example.com."
 }
@@ -160,13 +164,23 @@ Submit a new lead into VEGA.
 
 Leads can be submitted with a vendor API key or a client API key.
 
+<aside class="warning">
+<b><i>
 To submit a new lead, refer to the vendor-facing auto-generated form posting
-instructions in VEGA for the set of parameters to pass, as the set of fields is
-client-specific.
+instructions in VEGA for the URL and parameters to pass, as the exact format of
+the request is client-specific.
+</i></b>
+</aside>
 
 ### HTTP Request
 
-`POST https://leads.vegaforeducation.com/partner/leads`
+`POST https://leads.vegaforeducation.com/AwesomeUniversity/leads`
+
+Parameter | Description
+------ | -----------
+`campaign_id` | The id of the campaign to which to submit the lead
+`program_code` | The program code identifying the degree program
+... | Client-specific fields
 
 <aside class="success">
 In both the accepted and rejected cases, the API will return a 200 status.
@@ -175,11 +189,11 @@ In both the accepted and rejected cases, the API will return a 200 status.
 ## Get leads
 
 ```shell
-curl --get 'https://leads.vegaforeducation.com/partner/leads' \
+curl --get 'https://leads.vegaforeducation.com/AwesomeUniversity/leads' \
   -H 'X-API-Key: YOUR_API_KEY' \
   -d 'start_time=2021-01-01T05:00:00Z' \
   -d 'end_time=2021-02-01T04:59:59Z' \
-  -d 'campaign_id=d7e9134'
+  -d 'campaign_id=CAMP-d7e9134'
 ```
 
 > Response:
@@ -188,9 +202,9 @@ curl --get 'https://leads.vegaforeducation.com/partner/leads' \
 {
   "leads": [
     {
-      "id": "a43098ab",
+      "id": "VEGA-a43098ab",
       "external_id": "SALESFORCE_ID_12345",
-      "campaign_id": "d7e9134",
+      "campaign_id": "CAMP-d7e9134",
       "program_code": "PSYCH",
       "status": "interviewed",
       "billable": true,
@@ -221,7 +235,7 @@ can be seen in the Fields section of the VEGA management dashboard.
 
 ### HTTP Request
 
-`GET https://leads.vegaforeducation.com/partner/leads`
+`GET https://leads.vegaforeducation.com/AwesomeUniversity/leads`
 
 Parameter | Type | Description
 --------- | ------- | -----------
@@ -236,24 +250,25 @@ Parameter | Type | Description
 > Request:
 
 ```shell
-curl -X PATCH 'https://leads.vegaforeducation.com/partner/leads' \
+curl -X PATCH 'https://leads.vegaforeducation.com/AwesomeUniversity/leads' \
   -H 'X-API-Key: YOUR_API_KEY' \
   -H 'Content-type: application/json' \
   -d '{
-        "id": "a43098ab",
+        "id": "VEGA-a43098ab",
         "status": "returned",
         "billable": false
       }'
 ```
 
-Update the `status` or `billable` fields of a lead.
+Update the fields of a lead.
 
 This endpoint is only accessible with a client API key.
 
-`PATCH https://leads.vegaforeducation.com/partner/leads`
+`PATCH https://leads.vegaforeducation.com/AwesomeUniversity/leads`
 
 Parameter | Type | Description
 --------- | ------- | -----------
 `id` | String | The identifier of the lead
 `status` | [Status](#status) | The new status for the lead
 `billable` | Boolean | Whether or not the lead is billable. If it is not specified, it is inferred from the status.
+... | String | Any lead field whose value should be updated
