@@ -1,245 +1,259 @@
 ---
-title: API Reference
+title: VEGA API docs
 
 language_tabs: # must be one of https://github.com/rouge-ruby/rouge/wiki/List-of-supported-languages-and-lexers
   - shell
-  - ruby
-  - python
-  - javascript
 
-toc_footers:
-  - <a href='#'>Sign Up for a Developer Key</a>
-  - <a href='https://github.com/slatedocs/slate'>Documentation Powered by Slate</a>
-
-includes:
-  - errors
-
-search: true
+search: false
 
 code_clipboard: true
 
 meta:
   - name: description
-    content: Documentation for the Kittn API
+    content: VEGA API documentation
 ---
 
 # Introduction
 
-Welcome to the Kittn API! You can use our API to access Kittn API endpoints, which can get information on various cats, kittens, and breeds in our database.
+VEGA's lead API enables clients (institutions), lead vendors, and agencies to create prospective student records in the VEGA database.  Each program has a configurable filter/exclusion ruleset.
 
-We have language bindings in Shell, Ruby, Python, and JavaScript! You can view code examples in the dark area to the right, and you can switch the programming language of the examples with the tabs in the top right.
-
-This example API documentation page was created with [Slate](https://github.com/slatedocs/slate). Feel free to edit it and use it as a base for your own API's documentation.
+To make updates to your specific posting requirements or filter rules please login here: <a href="https://app.vegaforeducation.com/" target="_blank">https://app.vegaforeducation.com/</a> and navigate to the management tab.
 
 # Authentication
 
-> To authorize, use this code:
+All API requests need to be authenticated with your API key, passed in a header named `X-API-Key`:
 
-```ruby
-require 'kittn'
+`X-API-Key: YOUR_API_KEY`
 
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-```
+Lead submission requires a client or vendor API key, unless the client has
+enabled anonymous lead submission.
 
-```python
-import kittn
+All other APIs must be authenticated with a client API key.
 
-api = kittn.authorize('meowmeowmeow')
-```
+# Leads
 
-```shell
-# With shell, you can just pass the correct header with each request
-curl "api_endpoint_here" \
-  -H "Authorization: meowmeowmeow"
-```
+## Data model
 
-```javascript
-const kittn = require('kittn');
+Each lead has the following standard fields, in addition to any custom leads
+configured by the client in the Fields second of VEGA.
 
-let api = kittn.authorize('meowmeowmeow');
-```
+### Lead
 
-> Make sure to replace `meowmeowmeow` with your API key.
-
-Kittn uses API keys to allow access to the API. You can register a new Kittn API key at our [developer portal](http://example.com/developers).
-
-Kittn expects for the API key to be included in all API requests to the server in a header that looks like the following:
-
-`Authorization: meowmeowmeow`
-
-<aside class="notice">
-You must replace <code>meowmeowmeow</code> with your personal API key.
-</aside>
-
-# Kittens
-
-## Get All Kittens
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.get
-```
-
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.get()
-```
-
-```shell
-curl "http://example.com/api/kittens" \
-  -H "Authorization: meowmeowmeow"
-```
-
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-let kittens = api.kittens.get();
-```
-
-> The above command returns JSON structured like this:
+> Example lead:
 
 ```json
-[
-  {
-    "id": 1,
-    "name": "Fluffums",
-    "breed": "calico",
-    "fluffiness": 6,
-    "cuteness": 7
+{
+  "id": "a43098ab",
+  "external_id": "SALESFORCE_ID_12345",
+  "campaign_id": "d7e9134",
+  "program_code": "PSYCH",
+  "status": "interviewed",
+  "billable": true,
+  "raw_params": {
+    ...
   },
-  {
-    "id": 2,
-    "name": "Max",
-    "breed": "unknown",
-    "fluffiness": 5,
-    "cuteness": 10
-  }
-]
+  "remote_ip": "1.2.3.4",
+  "source": "facebook",
+  "subid": "creative_1234",
+  "vendor_id": "c867001",
+  "cost_in_cents": 7500,
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "phone": "2125551234",
+  "email": "jane.doe@example.com",
+  "street_address": "123 Fake St",
+  "city": "Oak Lawn",
+  "state": "IL",
+  "zip_code": "60453",
+  "GraduationYear": "2018",
+  "Military": "1",
+  "StartClasses": "within_3_months"
+}
 ```
 
-This endpoint retrieves all kittens.
+Parameter | Type | Description
+--------- | ------- | -----------
+`id` | String | The identifier of the lead
+`external_id` | String | The identifier of the lead in the client's CRM, e.g. Salesforce
+`campaign_id` | String | The id of the campaign for which the lead was submitted
+`program_code` | String | The id of the program for which the lead was submitted
+`status` | [Status](#status) | The status of the lead
+`billable` | Boolean | Whether or not the lead is billable to the vendor
+`rejection_reason` | String | Rejection reason, if the status is `rejected` or `error`
+`filtered_reason` | String | Filter reason, if the status is `filtered`
+`raw_params` | JSON | Raw parameters, exactly as they were submitted to the POST endpoint
+`remote_ip` | String | IP Address from which the POST endpoint was called
+`source` | String | The source of the lead (e.g. Facebook, Google, etc). The semantics of this field are client-defined.
+`subid` | String | Finer-grained source identifier, e.g. identifying the specific advertising creative that was shown to the lead. The semantics of this field are client-defined.
+`vendor_id` | String | Identifier of the vendor that submitted the lead. This may be an **internal vendor** of the client.
+`cost_in_cents` | Integer | The cost-per-lead, in cents, assigned to the lead. Note that this value is present whether or not the lead is billable, so in order to compute total outlay, sum the `cost_in_cents` over only those leads where `billable` is true.
+`first_name` | String | First name
+`last_name` | String | Last name
+`phone` | String | Phone number (digits only)
+`email` | String | Email address
+`street_address` | String | Street address, possibly normalized with Google Maps API
+`city` | String | City
+`state` | String | State
+`zip_code` | String | ZIP code
+... | ... | All client-specific custom fields
+
+### Status
+
+The following statuses are supported by default. Other statuses can be configured per-client:
+
+Status | Description
+------ | -----------
+`filtered` | Filtered before external validation
+`rejected` | Rejected by external validation
+`error` | Internal error occurred during lead processing
+`returned` | Previously accepted lead was invalidated after the fact
+`new_lead` | Lead received and accepted
+`contacted` | Lead has been contacted by an admissions advisor
+`interviewed` | Lead has completed the interview process
+`applied` | Lead has applied to the program
+`enrolled` | Lead has enrolled
+`started` | Lead has started at least one class in the program
+`class_passed` | Lead has passed at least one class
+
+
+## Post a new lead
+
+```shell
+curl -X POST 'https://leads.vegaforeducation.com/partner/leads' \
+  -H 'X-API-Key: YOUR_API_KEY' \
+  -H 'Content-type: application/json' \
+  -d '{
+        "campaign_id": "d7e9134",
+        "program_code": "PSYCH",
+        "StreetAddress": "123 Fake St",
+        "City": "Oak Lawn",
+        "State": "IL",
+        "ZIP_Code": "60453",
+        "FirstName": "Jane",
+        "LastName": "Doe",
+        "Phone": "2125551234",
+        "Email": "jane.doe@example.com",
+        "GraduationYear": "2018",
+        "Military": "1",
+        "StartClasses": "within_3_months"
+      }'
+```
+
+> Accepted lead response with status 200:
+
+```json
+{
+  "status": "new_lead"
+}
+```
+
+> Rejected lead response with status 200:
+
+```json
+{
+  "status": "rejected",
+  "rejection_reason": "Duplicate lead: jane.doe@example.com."
+}
+```
+
+Submit a new lead into VEGA.
+
+Leads can be submitted with a vendor API key or a client API key.
+
+To submit a new lead, refer to the vendor-facing auto-generated form posting
+instructions in VEGA for the set of parameters to pass, as the set of fields is
+client-specific.
 
 ### HTTP Request
 
-`GET http://example.com/api/kittens`
-
-### Query Parameters
-
-Parameter | Default | Description
---------- | ------- | -----------
-include_cats | false | If set to true, the result will also include cats.
-available | true | If set to false, the result will include kittens that have already been adopted.
+`POST https://leads.vegaforeducation.com/partner/leads`
 
 <aside class="success">
-Remember — a happy kitten is an authenticated kitten!
+In both the accepted and rejected cases, the API will return a 200 status.
 </aside>
 
-## Get a Specific Kitten
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.get(2)
-```
-
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.get(2)
-```
+## Get leads
 
 ```shell
-curl "http://example.com/api/kittens/2" \
-  -H "Authorization: meowmeowmeow"
+curl --get 'https://leads.vegaforeducation.com/partner/leads' \
+  -H 'X-API-Key: YOUR_API_KEY' \
+  -d 'start_time=2021-01-01T05:00:00Z' \
+  -d 'end_time=2021-02-01T04:59:59Z' \
+  -d 'campaign_id=d7e9134'
 ```
 
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-let max = api.kittens.get(2);
-```
-
-> The above command returns JSON structured like this:
+> Response:
 
 ```json
 {
-  "id": 2,
-  "name": "Max",
-  "breed": "unknown",
-  "fluffiness": 5,
-  "cuteness": 10
+  "leads": [
+    {
+      "id": "a43098ab",
+      "external_id": "SALESFORCE_ID_12345",
+      "campaign_id": "d7e9134",
+      "program_code": "PSYCH",
+      "status": "interviewed",
+      "billable": true,
+      "cost_in_cents": 7500,
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "phone": "2125551234",
+      "email": "jane.doe@example.com",
+      "street_address": "123 Fake St",
+      "city": "Oak Lawn",
+      "state": "IL",
+      "zip_code": "60453",
+      "GraduationYear": "2018",
+      "Military": "1",
+      "StartClasses": "within_3_months"
+    },
+    ...
+  ]
 }
 ```
 
-This endpoint retrieves a specific kitten.
+Get a list of your leads.
 
-<aside class="warning">Inside HTML code blocks like this one, you can't use Markdown, so use <code>&lt;code&gt;</code> blocks to denote code.</aside>
+This endpoint is only accessible with a client API key.
+
+Note that the set of fields returned in the lead data is client-specific and
+can be seen in the Fields section of the VEGA management dashboard.
 
 ### HTTP Request
 
-`GET http://example.com/kittens/<ID>`
+`GET https://leads.vegaforeducation.com/partner/leads`
 
-### URL Parameters
+Parameter | Type | Description
+--------- | ------- | -----------
+`start_time` | ISO 8601 timestamp | Only show leads created at or after the specified time
+`end_time` | ISO 8601 timestamp | Only show leads created at or before the specified time
+`campaign_id` | String | Only show leads associated with the specified campaign
+`vendor_id` | String | Only show leads submitted by the specified vendor
+`program_code` | String | Only show leads associated with the specified program
 
-Parameter | Description
---------- | -----------
-ID | The ID of the kitten to retrieve
+## Update a lead
 
-## Delete a Specific Kitten
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.delete(2)
-```
-
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.delete(2)
-```
+> Request:
 
 ```shell
-curl "http://example.com/api/kittens/2" \
-  -X DELETE \
-  -H "Authorization: meowmeowmeow"
+curl -X PATCH 'https://leads.vegaforeducation.com/partner/leads' \
+  -H 'X-API-Key: YOUR_API_KEY' \
+  -H 'Content-type: application/json' \
+  -d '{
+        "id": "a43098ab",
+        "status": "returned",
+        "billable": false
+      }'
 ```
 
-```javascript
-const kittn = require('kittn');
+Update the `status` or `billable` fields of a lead.
 
-let api = kittn.authorize('meowmeowmeow');
-let max = api.kittens.delete(2);
-```
+This endpoint is only accessible with a client API key.
 
-> The above command returns JSON structured like this:
+`PATCH https://leads.vegaforeducation.com/partner/leads`
 
-```json
-{
-  "id": 2,
-  "deleted" : ":("
-}
-```
-
-This endpoint deletes a specific kitten.
-
-### HTTP Request
-
-`DELETE http://example.com/kittens/<ID>`
-
-### URL Parameters
-
-Parameter | Description
---------- | -----------
-ID | The ID of the kitten to delete
-
+Parameter | Type | Description
+--------- | ------- | -----------
+`id` | String | The identifier of the lead
+`status` | [Status](#status) | The new status for the lead
+`billable` | Boolean | Whether or not the lead is billable. If it is not specified, it is inferred from the status.
